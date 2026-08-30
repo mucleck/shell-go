@@ -10,7 +10,7 @@ import (
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Print
 
-const messageCommandNotFound = "command not found\n"
+const messageCommandNotFound = "command not found"
 
 func main() {
 	for {
