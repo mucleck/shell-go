@@ -39,5 +39,5 @@ func checkExit(command string) bool {
 }
 
 func handleEcho(command string) {
-	fmt.Print(command[5:])
+	fmt.Println(command[5:])
 }
