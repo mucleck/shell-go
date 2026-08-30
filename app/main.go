@@ -12,10 +12,13 @@ var _ = fmt.Print
 const messageCommandNotFound = "command not found\n"
 
 func main() {
-	fmt.Print("$ ")
-	command, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		panic("error")
+	for {
+		fmt.Print("$ ")
+		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			panic("error")
+		}
+		fmt.Printf("%s: " + messageCommandNotFound, command[:len(command)-1])
 	}
-	fmt.Printf("%s: " + messageCommandNotFound, command[:len(command)-1])
+
 }
