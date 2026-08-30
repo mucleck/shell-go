@@ -22,6 +22,9 @@ func main() {
 		if checkExit(command) {
 			break
 		}
+		if strings.HasPrefix(command, "echo") {
+			handleEcho(command)
+		}
 		fmt.Printf("%s: " + messageCommandNotFound, command[:len(command)-1])
 	}
 }
@@ -31,4 +34,8 @@ func checkExit(command string) bool {
 		return true
 	}
 	return false
+}
+
+func handleEcho(command string) {
+	fmt.Println(command[5:])
 }
