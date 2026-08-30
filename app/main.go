@@ -18,18 +18,21 @@ func main() {
 		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			panic("error")
-		}
+		} 
+
+		command = strings.TrimSpace(command)
 		if checkExit(command) {
 			break
-		}
-		if strings.HasPrefix(command, "echo") {
+		} else if strings.HasPrefix(command, "echo") {
 			handleEcho(command)
+		} else {
+			fmt.Println(command + ": " + messageCommandNotFound)
 		}
 	}
 }
 
 func checkExit(command string) bool {
-	if strings.TrimSpace(command) == "exit" {
+	if command == "exit" {
 		return true
 	}
 	return false
