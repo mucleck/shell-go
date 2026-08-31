@@ -69,7 +69,7 @@ func handleType(command string) {
 		}
 
 		if strings.Contains(file.Mode().Perm().String(), "x") {
-			fmt.Println(executable + " is " + dir + executable)
+			fmt.Println(executable + " is " + filepath.Join(dir, executable))
 			return
 		} 
 	} 
