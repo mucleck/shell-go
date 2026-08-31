@@ -49,7 +49,7 @@ func handleType(command string) {
 	regex := regexp.MustCompile(`echo|type|exit`)
 
 	if !regex.MatchString(command[5:]) {
-		fmt.Println(command + ": not found")
+		fmt.Println(command[5:] + ": not found")
 	}
 
 	fmt.Println(command[5:] + " is a shell builtin")
