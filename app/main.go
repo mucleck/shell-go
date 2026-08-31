@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -23,7 +24,9 @@ func main() {
 		command = strings.TrimSpace(command)
 		if checkExit(command) {
 			break
-		} else if strings.HasPrefix(command, "echo") {
+		} else if strings.HasPrefix(command, "type") {
+			handleType(command)
+		}else if strings.HasPrefix(command, "echo") {
 			handleEcho(command)
 		} else {
 			fmt.Println(command + ": " + messageCommandNotFound)
@@ -40,4 +43,14 @@ func checkExit(command string) bool {
 
 func handleEcho(command string) {
 	fmt.Println(command[5:])
+}
+
+func handleType(command string) {
+	regex := regexp.MustCompile(`echo|type|exit`)
+
+	if !regex.MatchString(command) {
+		fmt.Println(command + ": not found")
+	}
+
+	fmt.Println(command[5:] + " is a shell builtin")
 }
