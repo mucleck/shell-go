@@ -48,7 +48,7 @@ func handleEcho(command string) {
 func handleType(command string) {
 	regex := regexp.MustCompile(`echo|type|exit`)
 
-	if !regex.MatchString(command) {
+	if !regex.MatchString(command[5:]) {
 		fmt.Println(command + ": not found")
 	}
 
