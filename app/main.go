@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -48,10 +49,54 @@ func handleEcho(command string) {
 func handleType(command string) {
 	regex := regexp.MustCompile(`echo|type|exit`)
 
-	if !regex.MatchString(command[5:]) {
-		fmt.Println(command[5:] + ": not found")
+	executable := command[5:]
+	if regex.MatchString(executable) {
+		fmt.Println(executable + " is a shell builtin")
 		return
 	}
 
-	fmt.Println(command[5:] + " is a shell builtin")
+	path, ok := os.LookupEnv("PATH")
+	if !ok {
+		fmt.Fprintln(os.Stderr, "Can't find PATH variable")
+	}
+
+	directories := strings.SplitSeq(path, string(os.PathListSeparator))
+	for dir := range directories {
+		//check file info in dir
+		file, err := os.Stat(filepath.Join(dir, executable))
+		if err != nil {
+			continue
+		}
+
+		if strings.Contains(file.Mode().Perm().String(), "x") {
+			fmt.Println(executable + " is " + dir)
+			return
+		} 
+	} 
+
+	fmt.Println(executable + ": not found")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
