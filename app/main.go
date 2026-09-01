@@ -9,30 +9,45 @@ import (
 	"strings"
 )
 
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Print
+var path string
 
 const messageCommandNotFound = "command not found"
 
 func main() {
+	path = getPath()
 	for {
 		fmt.Print("$ ")
 		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			panic("error")
-		} 
+		}
 
-		command = strings.TrimSpace(command)
+		command, args := parseInput(strings.TrimSpace(command))
 		if checkExit(command) {
 			break
-		} else if strings.HasPrefix(command, "type") {
-			handleType(command)
-		}else if strings.HasPrefix(command, "echo") {
-			handleEcho(command)
+		} else if command == "type" {
+			handleType(command, args)
+		} else if command == "echo" {
+			handleEcho(args)
+		} else if commandExists(command) != "" {
+			executeCommand(command, args)
 		} else {
 			fmt.Println(command + ": " + messageCommandNotFound)
 		}
 	}
+}
+
+func parseInput(input string) (command string, args []string) {
+	firstsPace := strings.Index(input, " ")
+	if firstsPace == -1 {
+		fmt.Println(input, " y args ", args)
+		return input, args
+	}
+
+	command = input[:firstsPace]
+	args = strings.Split(input[firstsPace+1:], " ")
+	fmt.Println(command, " y argumentos ", args)
+	return command, args
 }
 
 func checkExit(command string) bool {
@@ -42,61 +57,58 @@ func checkExit(command string) bool {
 	return false
 }
 
-func handleEcho(command string) {
-	fmt.Println(command[5:])
+func handleEcho(args []string) {
+	fmt.Println(strings.Join(args, " "))
 }
 
-func handleType(command string) {
-	regex := regexp.MustCompile(`echo|type|exit`)
+func handleType(command string, args []string) {
 
-	executable := command[5:]
-	if regex.MatchString(executable) {
-		fmt.Println(executable + " is a shell builtin")
+	if len(args) == 0 {
 		return
 	}
 
-	path, ok := os.LookupEnv("PATH")
-	if !ok {
-		fmt.Fprintln(os.Stderr, "Can't find PATH variable")
+	regex := regexp.MustCompile(`echo|type|exit`)
+
+	if regex.MatchString(args[0]) {
+		fmt.Println(args[0] + " is a shell builtin")
+		return
 	}
 
+	commandPath := commandExists(args[0])
+
+	if commandPath != "" {
+		fmt.Println(command + " is " + commandPath)
+	} else {
+		fmt.Println(command + ": not found")
+	}
+}
+
+func commandExists(command string) string {
 	directories := strings.SplitSeq(path, string(os.PathListSeparator))
 	for dir := range directories {
 		//check file info in dir
-		file, err := os.Stat(filepath.Join(dir, executable))
+		file, err := os.Stat(filepath.Join(dir, command))
 		if err != nil {
 			continue
 		}
 
 		if strings.Contains(file.Mode().Perm().String(), "x") {
-			fmt.Println(executable + " is " + filepath.Join(dir, executable))
-			return
-		} 
-	} 
+			return filepath.Join(dir, command)
+		}
+	}
+	return ""
 
-	fmt.Println(executable + ": not found")
 }
 
+func executeCommand(command string, args []string) {
+	fmt.Println(command, " y argumentos: ", args)
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+func getPath() (path string) {
+	path, ok := os.LookupEnv("PATH")
+	if !ok {
+		fmt.Fprintln(os.Stderr, "Can't find PATH variable")
+		return "" //In case it failed
+	}
+	return path
+}
