@@ -81,7 +81,7 @@ func handleType(args []string) {
 		return
 	}
 
-	fmt.Println(args[0] + ": command not found")
+	fmt.Println(args[0] + ": not found")
 }
 
 func commandExists(command string) string {
