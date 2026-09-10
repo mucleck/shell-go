@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -38,15 +39,14 @@ func main() {
 }
 
 func parseInput(input string) (command string, args []string) {
+	input = strings.TrimSuffix(input, "\n")
 	firstsPace := strings.Index(input, " ")
 	if firstsPace == -1 {
-		fmt.Println(input, " y args ", args)
 		return input, args
 	}
 
 	command = input[:firstsPace]
 	args = strings.Split(input[firstsPace+1:], " ")
-	fmt.Println(command, " y argumentos ", args)
 	return command, args
 }
 
@@ -78,8 +78,6 @@ func handleType(command string, args []string) {
 
 	if commandPath != "" {
 		fmt.Println(command + " is " + commandPath)
-	} else {
-		fmt.Println(command + ": not found")
 	}
 }
 
@@ -101,7 +99,12 @@ func commandExists(command string) string {
 }
 
 func executeCommand(command string, args []string) {
-	fmt.Println(command, " y argumentos: ", args)
+	cmd := exec.Command(command, args...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(cmd.Stderr, err)
+	}
 }
 
 func getPath() (path string) {
