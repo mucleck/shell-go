@@ -79,6 +79,8 @@ func handleType(args []string) {
 	if commandPath != "" {
 		fmt.Println(args[0] + " is " + commandPath)
 	}
+
+	fmt.Println(args[0] + ": command not found")
 }
 
 func commandExists(command string) string {
