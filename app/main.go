@@ -27,7 +27,7 @@ func main() {
 		if checkExit(command) {
 			break
 		} else if command == "type" {
-			handleType(command, args)
+			handleType(args)
 		} else if command == "echo" {
 			handleEcho(args)
 		} else if commandExists(command) != "" {
@@ -61,7 +61,7 @@ func handleEcho(args []string) {
 	fmt.Println(strings.Join(args, " "))
 }
 
-func handleType(command string, args []string) {
+func handleType(args []string) {
 
 	if len(args) == 0 {
 		return
@@ -77,7 +77,7 @@ func handleType(command string, args []string) {
 	commandPath := commandExists(args[0])
 
 	if commandPath != "" {
-		fmt.Println(command + " is " + commandPath)
+		fmt.Println(args[0] + " is " + commandPath)
 	}
 }
 
