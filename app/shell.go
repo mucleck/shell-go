@@ -20,6 +20,8 @@ var (
 	ErrPathNotFound = errors.New("cannot find path")
 )
 
+const messageCommandNotFound = "command not found"
+
 func ExecuteShell() error {
 	var err error
 	path, err = getPath()
@@ -56,6 +58,8 @@ func handleCommand(c string, args []string) bool {
 		echoCommand(args)
 	case commandExistsInPath(c) != "":
 		executeCommand(c, args)
+	default:
+		fmt.Println(c + ": " + messageCommandNotFound)
 	}
 	return false
 }
