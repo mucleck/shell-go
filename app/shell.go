@@ -18,6 +18,7 @@ var (
 
 	// Errors
 	ErrPathNotFound = errors.New("cannot find path")
+	ErrPwdNotFound  = errors.New("cant get current working dir, weird")
 )
 
 const messageCommandNotFound = "command not found"
@@ -53,9 +54,11 @@ func handleCommand(c string, args []string) bool {
 	case c == "exit":
 		return true
 	case c == "type":
-		handleTypeCommand(args)
+		typeCommand(args)
 	case c == "echo":
 		echoCommand(args)
+	case c == "pwd":
+		pwdCommand()
 	case commandExistsInPath(c) != "":
 		executeCommand(c, args)
 	default:
@@ -64,7 +67,15 @@ func handleCommand(c string, args []string) bool {
 	return false
 }
 
-func handleTypeCommand(args []string) {
+func pwdCommand() {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Println(ErrPwdNotFound)
+	}
+	fmt.Println(dir)
+}
+
+func typeCommand(args []string) {
 
 	if len(args) == 0 {
 		return
