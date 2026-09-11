@@ -1,5 +1,12 @@
 package main
 
+func main() {
+	if err := ExecuteShell(); err != nil {
+		panic(err)
+	}
+}
+
+/*
 import (
 	"bufio"
 	"fmt"
@@ -117,4 +124,4 @@ func getPath() (path string) {
 		return "" //In case it failed
 	}
 	return path
-}
+}*/
