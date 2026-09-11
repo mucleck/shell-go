@@ -81,7 +81,7 @@ func typeCommand(args []string) {
 		return
 	}
 
-	regex := regexp.MustCompile(`echo|type|exit`)
+	regex := regexp.MustCompile(`echo|type|exit|pwd`)
 
 	if regex.MatchString(args[0]) {
 		fmt.Println(args[0] + " is a shell builtin")
