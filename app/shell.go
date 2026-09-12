@@ -16,12 +16,16 @@ var (
 	path        string
 	shellPrefix = "$ "
 
-	// Errors
 	ErrPathNotFound = errors.New("cannot find path")
 	ErrPwdNotFound  = errors.New("cant get current working dir, weird")
 )
 
 const messageCommandNotFound = "command not found"
+
+type Command struct {
+	name string
+	args []string
+}
 
 func ExecuteShell() error {
 	var err error
@@ -33,15 +37,15 @@ func ExecuteShell() error {
 	for {
 		fmt.Print(shellPrefix)
 
-		command, err := readInput()
+		input, err := readInput()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		command, args := parseInput(command)
+		command := parseInput(input)
 
-		if handleCommand(command, args) {
+		if handleCommand(command) {
 			break
 		}
 	}
@@ -49,22 +53,58 @@ func ExecuteShell() error {
 	return nil
 }
 
-func handleCommand(c string, args []string) bool {
+func handleCommand(c Command) bool {
 	switch {
-	case c == "exit":
+	case c.name == "exit":
 		return true
-	case c == "type":
-		typeCommand(args)
-	case c == "echo":
-		echoCommand(args)
-	case c == "pwd":
-		pwdCommand()
-	case commandExistsInPath(c) != "":
-		executeCommand(c, args)
+	case isBuiltinCommand(c.name):
+		runBuiltinCommand(c)
+	case commandExistsInPath(c.name) != "":
+		runCommand(c)
 	default:
-		fmt.Println(c + ": " + messageCommandNotFound)
+		fmt.Println(c.name + ": " + messageCommandNotFound)
 	}
 	return false
+}
+
+func isBuiltinCommand(name string) bool {
+	switch name {
+	case "type", "echo", "pwd", "cd":
+		return true
+	}
+	return false
+}
+
+func runBuiltinCommand(c Command) {
+	switch c.name {
+	case "type":
+		typeCommand(c.args)
+	case "echo":
+		echoCommand(c.args)
+	case "pwd":
+		pwdCommand()
+	case "cd":
+		cdCommand(c.args)
+	}
+}
+
+func cdCommand(args []string) {
+	if len(args) == 0 {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Println(err)
+		}
+
+		if err := os.Chdir(homeDir); err != nil {
+			log.Println(err)
+		}
+	}
+
+	if err := os.Chdir(args[0]); err != nil {
+		//log.Println(err)
+		fmt.Println("cd: " + args[0] + ": No such file or directory")
+	}
+
 }
 
 func pwdCommand() {
@@ -120,8 +160,8 @@ func commandExistsInPath(command string) string {
 
 }
 
-func executeCommand(command string, args []string) {
-	cmd := exec.Command(command, args...)
+func runCommand(c Command) {
+	cmd := exec.Command(c.name, c.args...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
@@ -137,15 +177,20 @@ func readInput() (command string, err error) {
 	return command, nil
 }
 
-func parseInput(input string) (command string, args []string) {
+func parseInput(input string) Command {
 	input = strings.TrimSuffix(strings.TrimSpace(input), "\n")
 
 	firstSpace := strings.Index(input, " ")
 	if firstSpace == -1 {
-		return input, args
+		return Command{
+			name: input,
+		}
 	}
 
-	return input[:firstSpace], strings.Split(input[firstSpace+1:], " ")
+	return Command{
+		name: input[:firstSpace],
+		args: strings.Split(input[firstSpace+1:], " "),
+	}
 }
 
 func getPath() (path string, err error) {
