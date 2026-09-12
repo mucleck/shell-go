@@ -89,7 +89,7 @@ func runBuiltinCommand(c Command) {
 }
 
 func cdCommand(args []string) {
-	if len(args) == 0 {
+	if len(args) == 0 || args[0] == "~" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			log.Println(err)
@@ -98,13 +98,13 @@ func cdCommand(args []string) {
 		if err := os.Chdir(homeDir); err != nil {
 			log.Println(err)
 		}
+		return
 	}
 
 	if err := os.Chdir(args[0]); err != nil {
 		//log.Println(err)
 		fmt.Println("cd: " + args[0] + ": No such file or directory")
 	}
-
 }
 
 func pwdCommand() {
