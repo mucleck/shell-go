@@ -29,6 +29,7 @@ type state int
 const (
 	normalState state = iota
 	singleQuoteState
+	doubleQuoteState
 )
 
 type Command struct {
@@ -207,22 +208,30 @@ func parseInput(input *bufio.Reader) (Command, error) {
 
 		switch state {
 		case normalState:
-			if c == ' ' {
+			switch c {
+			case ' ':
 				if word.Len() > 0 {
 					args = append(args, word.String())
 					word.Reset()
 				}
 				continue
-			}
 
-			if c == '\'' {
+			case '\'':
 				state = singleQuoteState
-				continue
+			case '"':
+				state = doubleQuoteState
+			default:
+				word.WriteRune(c)
 			}
 
-			word.WriteRune(c)
 		case singleQuoteState:
 			if c == '\'' {
+				state = normalState
+			} else {
+				word.WriteRune(c)
+			}
+		case doubleQuoteState:
+			if c == '"' {
 				state = normalState
 			} else {
 				word.WriteRune(c)
