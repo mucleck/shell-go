@@ -194,6 +194,7 @@ func readInput() (command *bufio.Reader, err error) {
 func parseInput(input *bufio.Reader) (Command, error) {
 	var args []string
 	var word strings.Builder
+	var previousState state
 	state := normalState
 	for {
 		c, _, err := input.ReadRune()
@@ -234,14 +235,18 @@ func parseInput(input *bufio.Reader) (Command, error) {
 				word.WriteRune(c)
 			}
 		case doubleQuoteState:
-			if c == '"' {
+			switch c {
+			case '"':
 				state = normalState
-			} else {
+			case '\\':
+				previousState = state
+				state = backslashState
+			default:
 				word.WriteRune(c)
 			}
 		case backslashState:
 			word.WriteRune(c)
-			state = normalState
+			state = previousState
 		}
 	}
 
