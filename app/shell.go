@@ -30,6 +30,7 @@ const (
 	normalState state = iota
 	singleQuoteState
 	doubleQuoteState
+	backslashState
 )
 
 type Command struct {
@@ -209,6 +210,8 @@ func parseInput(input *bufio.Reader) (Command, error) {
 		switch state {
 		case normalState:
 			switch c {
+			case '\\':
+				state = backslashState
 			case ' ':
 				if word.Len() > 0 {
 					args = append(args, word.String())
@@ -236,6 +239,9 @@ func parseInput(input *bufio.Reader) (Command, error) {
 			} else {
 				word.WriteRune(c)
 			}
+		case backslashState:
+			word.WriteRune(c)
+			state = normalState
 		}
 	}
 
