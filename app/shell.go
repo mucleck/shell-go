@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -18,9 +19,17 @@ var (
 
 	ErrPathNotFound = errors.New("cannot find path")
 	ErrPwdNotFound  = errors.New("cant get current working dir, weird")
+	ErrNoToken      = errors.New("Nothing entered or cant parse it")
 )
 
 const messageCommandNotFound = "command not found"
+
+type state int
+
+const (
+	normalState state = iota
+	singleQuoteState
+)
 
 type Command struct {
 	name string
@@ -43,7 +52,10 @@ func ExecuteShell() error {
 			continue
 		}
 
-		command := parseInput(input)
+		command, err := parseInput(input)
+		if err != nil {
+			continue
+		}
 
 		if handleCommand(command) {
 			break
@@ -169,28 +181,64 @@ func runCommand(c Command) {
 	}
 }
 
-func readInput() (command string, err error) {
-	command, err = bufio.NewReader(os.Stdin).ReadString('\n')
+func readInput() (command *bufio.Reader, err error) {
+	command = bufio.NewReader(os.Stdin)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return command, nil
 }
 
-func parseInput(input string) Command {
-	input = strings.TrimSuffix(strings.TrimSpace(input), "\n")
+func parseInput(input *bufio.Reader) (Command, error) {
+	var args []string
+	var word strings.Builder
+	state := normalState
+	for {
+		c, _, err := input.ReadRune()
 
-	firstSpace := strings.Index(input, " ")
-	if firstSpace == -1 {
-		return Command{
-			name: input,
+		if err == io.EOF || c == '\n' {
+			if word.Len() > 0 {
+				args = append(args, word.String())
+			}
+			break
+		} else if err != nil {
+			panic(err)
+		}
+
+		switch state {
+		case normalState:
+			if c == ' ' {
+				if word.Len() > 0 {
+					args = append(args, word.String())
+					word.Reset()
+				}
+				continue
+			}
+
+			if c == '\'' {
+				state = singleQuoteState
+				continue
+			}
+
+			word.WriteRune(c)
+		case singleQuoteState:
+			if c == '\'' {
+				state = normalState
+			} else {
+				word.WriteRune(c)
+			}
 		}
 	}
 
-	return Command{
-		name: input[:firstSpace],
-		args: strings.Split(input[firstSpace+1:], " "),
+	if len(args) == 0 {
+		return Command{}, ErrNoToken
 	}
+
+	return Command{
+		name: args[0],
+		args: args[1:],
+	}, nil
+
 }
 
 func getPath() (path string, err error) {
