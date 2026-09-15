@@ -191,7 +191,7 @@ func runCommand(c Command) {
 	}
 
 	if err := cmd.Run(); err != nil {
-		//fmt.Fprintln(cmd.Stderr, err)
+		fmt.Fprintln(cmd.Stderr, err)
 	}
 }
 
