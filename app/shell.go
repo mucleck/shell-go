@@ -184,7 +184,7 @@ func runCommand(c Command) {
 	cmd := exec.Command(c.name, c.args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = c.redirects.stdin, c.redirects.stdout, c.redirects.stderr
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(cmd.Stderr, err)
+		//
 	}
 }
 

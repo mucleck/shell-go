@@ -1,0 +1,2 @@
+ls: no se puede acceder a ''noexisto'': No existe el archivo o directorio
+exit status 2
