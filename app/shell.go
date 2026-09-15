@@ -33,9 +33,16 @@ const (
 	backslashState
 )
 
+type fds struct {
+	stdout *os.File
+	stdin  *os.File
+	stderr *os.File
+}
+
 type Command struct {
-	name string
-	args []string
+	name      string
+	args      []string
+	redirects fds
 }
 
 func ExecuteShell() error {
@@ -92,17 +99,17 @@ func isBuiltinCommand(name string) bool {
 func runBuiltinCommand(c Command) {
 	switch c.name {
 	case "type":
-		typeCommand(c.args)
+		typeCommand(c.args, &c.redirects)
 	case "echo":
-		echoCommand(c.args)
+		echoCommand(c.args, &c.redirects)
 	case "pwd":
-		pwdCommand()
+		pwdCommand(&c.redirects)
 	case "cd":
-		cdCommand(c.args)
+		cdCommand(c.args, &c.redirects)
 	}
 }
 
-func cdCommand(args []string) {
+func cdCommand(args []string, c *fds) {
 	if len(args) == 0 || args[0] == "~" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -110,26 +117,25 @@ func cdCommand(args []string) {
 		}
 
 		if err := os.Chdir(homeDir); err != nil {
-			log.Println(err)
+			fmt.Fprintf(c.stderr, "%v", err)
 		}
 		return
 	}
 
 	if err := os.Chdir(args[0]); err != nil {
-		//log.Println(err)
-		fmt.Println("cd: " + args[0] + ": No such file or directory")
+		fmt.Fprintf(c.stderr, "cd: %s: No such file or directory\n", args[0])
 	}
 }
 
-func pwdCommand() {
+func pwdCommand(c *fds) {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Println(ErrPwdNotFound)
+		fmt.Fprintf(c.stderr, "%v", ErrPwdNotFound)
 	}
-	fmt.Println(dir)
+	fmt.Fprintf(c.stdout, "%s\n", dir)
 }
 
-func typeCommand(args []string) {
+func typeCommand(args []string, c *fds) {
 
 	if len(args) == 0 {
 		return
@@ -138,22 +144,22 @@ func typeCommand(args []string) {
 	regex := regexp.MustCompile(`echo|type|exit|pwd`)
 
 	if regex.MatchString(args[0]) {
-		fmt.Println(args[0] + " is a shell builtin")
+		fmt.Fprintf(c.stdout, "%s is a shell builtin\n", args[0])
 		return
 	}
 
 	commandPath := commandExistsInPath(args[0])
 
 	if commandPath != "" {
-		fmt.Println(args[0] + " is " + commandPath)
+		fmt.Fprintf(c.stdout, "%s is %s\n", args[0], commandPath)
 		return
 	}
 
 	fmt.Println(args[0] + ": not found")
 }
 
-func echoCommand(args []string) {
-	fmt.Println(strings.Join(args, " "))
+func echoCommand(args []string, c *fds) {
+	fmt.Fprintf(c.stdout, "%s\n", strings.Join(args, " "))
 }
 
 func commandExistsInPath(command string) string {
@@ -177,22 +183,106 @@ func commandExistsInPath(command string) string {
 func runCommand(c Command) {
 	cmd := exec.Command(c.name, c.args...)
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
+
+	if c.redirects.stdout != nil {
+		cmd.Stdout = c.redirects.stdout
+	} else {
+		cmd.Stdout = os.Stdout
+	}
+
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(cmd.Stderr, err)
+		//fmt.Fprintln(cmd.Stderr, err)
 	}
 }
 
 func readInput() (command *bufio.Reader, err error) {
 	command = bufio.NewReader(os.Stdin)
-	if err != nil {
-		return nil, err
-	}
 	return command, nil
 }
 
+/*
+<    → stdin (fd 0)
+0<   → stdin (fd 0)
+
+>    → stdout (fd 1)
+1>   → stdout (fd 1)
+>>   → stdout (fd 1)
+1>>  → stdout (fd 1)
+
+2>   → stderr (fd 2)
+2>>  → stderr (fd 2)
+*/
+
 func parseInput(input *bufio.Reader) (Command, error) {
+	tokens := getTokens(input)
+
+	if len(tokens) == 0 {
+		return Command{}, ErrNoToken
+	}
+
+	return getCommandFromTokens(tokens), nil
+}
+func getCommandFromTokens(tokens []string) Command {
 	var args []string
+	var redirects fds
+
+	for i := 1; i < len(tokens); i++ {
+		word := tokens[i]
+		switch {
+		case strings.HasSuffix(word, ">"):
+			generateStdoutOrStderr(word, tokens[i+1], &redirects)
+			i++
+		case strings.HasSuffix(word, "<"):
+			// one day i do this dw
+		default:
+			args = append(args, word)
+		}
+	}
+
+	if redirects.stdin == nil {
+		redirects.stdin = os.Stdin
+	}
+
+	if redirects.stdout == nil {
+		redirects.stdout = os.Stdout
+	}
+
+	if redirects.stderr == nil {
+		redirects.stderr = os.Stderr
+	}
+
+	return Command{
+		name:      tokens[0],
+		args:      args,
+		redirects: redirects,
+	}
+}
+
+func generateStdoutOrStderr(stdin, file string, redirects *fds) {
+	var mode int
+
+	switch strings.Count(stdin, ">") {
+	case 1:
+		mode = os.O_TRUNC
+	case 2:
+		mode = os.O_APPEND
+	}
+
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|mode, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	prefix := stdin[0]
+	switch prefix {
+	case '1', '>':
+		redirects.stdout = f
+	case '2':
+		redirects.stderr = f
+	}
+}
+
+func getTokens(input *bufio.Reader) (tokens []string) {
 	var word strings.Builder
 	var previousState state
 	state := normalState
@@ -201,7 +291,7 @@ func parseInput(input *bufio.Reader) (Command, error) {
 
 		if err == io.EOF || c == '\n' {
 			if word.Len() > 0 {
-				args = append(args, word.String())
+				tokens = append(tokens, word.String())
 			}
 			break
 		} else if err != nil {
@@ -215,7 +305,7 @@ func parseInput(input *bufio.Reader) (Command, error) {
 				state = backslashState
 			case ' ':
 				if word.Len() > 0 {
-					args = append(args, word.String())
+					tokens = append(tokens, word.String())
 					word.Reset()
 				}
 				continue
@@ -224,6 +314,25 @@ func parseInput(input *bufio.Reader) (Command, error) {
 				state = singleQuoteState
 			case '"':
 				state = doubleQuoteState
+			case '>':
+				next, _, err := input.ReadRune()
+				if err != nil {
+					panic(err)
+				}
+
+				if next == '>' {
+					word.WriteRune('>')
+				} else {
+					input.UnreadRune()
+				}
+
+				word.WriteRune('>')
+				tokens = append(tokens, word.String())
+				word.Reset()
+			case '<':
+				word.WriteRune(c)
+				tokens = append(tokens, word.String())
+				word.Reset()
 			default:
 				word.WriteRune(c)
 			}
@@ -250,15 +359,7 @@ func parseInput(input *bufio.Reader) (Command, error) {
 		}
 	}
 
-	if len(args) == 0 {
-		return Command{}, ErrNoToken
-	}
-
-	return Command{
-		name: args[0],
-		args: args[1:],
-	}, nil
-
+	return tokens
 }
 
 func getPath() (path string, err error) {
