@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 var (
@@ -45,6 +46,26 @@ type Command struct {
 	redirects fds
 }
 
+type completer struct {
+	commands []string
+}
+
+func (comp *completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	input := string(line[:pos])
+	var matches [][]rune
+
+	for _, command := range comp.commands {
+		if strings.HasPrefix(command, input) {
+			//the space addition is ugly but works for the test, soon ill get a holy refactor
+			//because this code looks llike trash rn BUT WORKS
+			//this weekend i refactor it ong
+			matches = append(matches, []rune(command[pos:]+" "))
+		}
+	}
+
+	return matches, len([]rune(input))
+}
+
 func ExecuteShell() error {
 	var err error
 	path, err = getPath()
@@ -52,16 +73,23 @@ func ExecuteShell() error {
 		return err
 	}
 
-	for {
-		fmt.Print(shellPrefix)
+	rl, err := readline.New(shellPrefix)
+	rl.Config.AutoComplete = &completer{
+		commands: []string{"echo", "type", "exit", "cd", "pwd"},
+	}
 
-		input, err := readInput()
-		if err != nil {
-			log.Println(err)
-			continue
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
+
+	for {
+		input, err := rl.Readline()
+		if err != nil { // io.EOF
+			break
 		}
 
-		command, err := parseInput(input)
+		command, err := parseInput(strings.NewReader(input))
 		if err != nil {
 			continue
 		}
@@ -92,8 +120,9 @@ func isBuiltinCommand(name string) bool {
 	switch name {
 	case "type", "echo", "pwd", "cd":
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func runBuiltinCommand(c Command) {
@@ -188,14 +217,7 @@ func runCommand(c Command) {
 	}
 }
 
-func readInput() (command *bufio.Reader, err error) {
-	command = bufio.NewReader(os.Stdin)
-	return command, nil
-}
-
 /*
-<    → stdin (fd 0)
-0<   → stdin (fd 0)
 
 >    → stdout (fd 1)
 1>   → stdout (fd 1)
@@ -206,7 +228,7 @@ func readInput() (command *bufio.Reader, err error) {
 2>>  → stderr (fd 2)
 */
 
-func parseInput(input *bufio.Reader) (Command, error) {
+func parseInput(input *strings.Reader) (Command, error) {
 	tokens := getTokens(input)
 
 	if len(tokens) == 0 {
@@ -275,7 +297,7 @@ func generateStdoutOrStderr(stdin, file string, redirects *fds) {
 	}
 }
 
-func getTokens(input *bufio.Reader) (tokens []string) {
+func getTokens(input *strings.Reader) (tokens []string) {
 	var word strings.Builder
 	var previousState state
 	state := normalState

@@ -1,9 +1,0 @@
-total 24
--rw-rw-r-- 1 afranco afranco 1295 Aug 30 18:23 README.md
-drwxrwxr-x 2 afranco afranco 4096 Sep 15 17:35 app
--rw-rw-r-- 1 afranco afranco  278 Aug 30 18:23 codecrafters.yml
--rw-r--r-- 1 afranco afranco    0 Sep 15 17:35 f.txt
--rw-rw-r-- 1 afranco afranco   62 Aug 30 18:23 go.mod
--rw-rw-r-- 1 afranco afranco    0 Aug 30 18:23 go.sum
-drwxrwxr-x 2 afranco afranco 4096 Sep 15 12:08 test
--rwxrwxr-x 1 afranco afranco  773 Sep 12 09:31 your_program.sh
