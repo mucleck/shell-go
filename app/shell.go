@@ -63,6 +63,10 @@ func (comp *completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		}
 	}
 
+	if len(matches) == 0 {
+		matches = append(matches, []rune{'\x07'})
+	}
+
 	return matches, len([]rune(input))
 }
 
