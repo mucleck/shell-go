@@ -71,7 +71,7 @@ func (comp *completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		for _, f := range files {
 			info, _ := f.Info()
 			if !info.IsDir() && info.Mode().Perm()&0111 != 0 && strings.HasPrefix(info.Name(), input) {
-				matches = append(matches, []rune(info.Name()[pos:] + " "))
+				matches = append(matches, []rune(info.Name()[pos:]+" "))
 			}
 
 		}
@@ -256,6 +256,7 @@ func parseInput(input *strings.Reader) (Command, error) {
 
 	return getCommandFromTokens(tokens), nil
 }
+
 func getCommandFromTokens(tokens []string) Command {
 	var args []string
 	var redirects fds
