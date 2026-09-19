@@ -112,6 +112,21 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 		}, len([]rune(input))
 
 	default:
+		//MOST UGLY CODE EVEEEEEEEEEERRRRRRRRR
+		//refactor on the next week fr
+		wordToadd := ""
+		for i, c := range matches[0][pos:] {
+			if isXinallY(c, i, pos, matches[0:]) {
+				wordToadd += string(c)
+				continue
+			}
+			break
+		}
+
+		if wordToadd != "" {
+			return [][]rune{[]rune(wordToadd)}, 0
+		}
+
 		if a.isFirstTab {
 			a.isFirstTab = false
 			fmt.Print("\a")
@@ -127,6 +142,15 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 	}
 
 	return nil, pos
+}
+
+func isXinallY(c rune, i, pos int, matches []string) bool {
+	for _, match := range matches {
+		if match[i+pos] != byte(c) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Shell) Run() error {
