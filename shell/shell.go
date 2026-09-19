@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -53,61 +54,104 @@ func New() *Shell {
 		},
 	}
 
-	s.autocompleter = &AutoCompleter{shell: &s}
+	s.autocompleter = &AutoCompleter{shell: &s, isFirstTab: true}
 	return &s
 }
 
 type AutoCompleter struct {
-	shell *Shell
+	shell      *Shell
+	isFirstTab bool
+	refresh    func()
 }
 
+// refactor of this soon
 func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-
 	input := string(line[:pos])
-	var matches [][]rune
+	var matches []string
 
 	for command := range a.shell.builtin {
 		if strings.HasPrefix(command, input) {
-			//the space addition is ugly but works for the test, soon ill get a holy refactor
-			//because this code looks llike trash rn BUT WORKS
-			//this weekend i refactor it ong
-			matches = append(matches, []rune(command[pos:]+" "))
+			matches = append(matches, command)
 		}
 	}
 
-	//check for path files
+	for _, dir := range filepath.SplitList(a.shell.path) {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
 
-	paths := filepath.SplitList(a.shell.path)
-	for _, dir := range paths {
-		files, _ := os.ReadDir(dir)
 		for _, f := range files {
-			info, _ := f.Info()
-			if !info.IsDir() && info.Mode().Perm()&0111 != 0 && strings.HasPrefix(info.Name(), input) {
-				matches = append(matches, []rune(info.Name()[pos:]+" "))
+			info, err := f.Info()
+			if err != nil {
+				continue
 			}
 
+			if !info.IsDir() &&
+				info.Mode().Perm()&0111 != 0 &&
+				strings.HasPrefix(f.Name(), input) {
+				matches = append(matches, f.Name())
+			}
+		}
+	}
+
+	slices.Sort(matches)
+	matches = slices.Compact(matches)
+
+	switch len(matches) {
+	case 0:
+		fmt.Print("\a")
+		a.isFirstTab = true
+
+	case 1:
+		a.isFirstTab = true
+		match := strings.TrimPrefix(matches[0], input)
+
+		return [][]rune{
+			[]rune(match + " "),
+		}, len([]rune(input))
+
+	default:
+		if a.isFirstTab {
+			a.isFirstTab = false
+			fmt.Print("\a")
 		}
 
+		fmt.Print("\n" + strings.Join(matches, "  ") + "\n")
+
+		if a.refresh != nil {
+			a.refresh()
+		}
+
+		a.isFirstTab = true
 	}
 
-	if len(matches) == 0 {
-		matches = append(matches, []rune{'\x07'})
-	}
-
-	return matches, len([]rune(input))
+	return nil, pos
 }
 
 func (s *Shell) Run() error {
-	rl, err := readline.NewEx(&readline.Config{
+	rlConfig := &readline.Config{
 		Prompt:       s.prompt,
 		AutoComplete: s.autocompleter,
+	}
+
+	rlConfig.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
+		if key != '\t' {
+			s.autocompleter.isFirstTab = true
+		}
+
+		return line, pos, false
 	})
+
+	rl, err := readline.NewEx(rlConfig)
 
 	if err != nil {
 		panic(err)
 	}
 
 	defer rl.Close()
+
+	s.autocompleter.refresh = rl.Refresh
 
 	for {
 		input, err := rl.Readline()
