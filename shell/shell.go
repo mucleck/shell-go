@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -58,101 +57,6 @@ func New() *Shell {
 	return &s
 }
 
-type AutoCompleter struct {
-	shell      *Shell
-	isFirstTab bool
-	refresh    func()
-}
-
-// refactor of this soon
-func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-	input := string(line[:pos])
-	var matches []string
-
-	for command := range a.shell.builtin {
-		if strings.HasPrefix(command, input) {
-			matches = append(matches, command)
-		}
-	}
-
-	for _, dir := range filepath.SplitList(a.shell.path) {
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-
-		for _, f := range files {
-			info, err := f.Info()
-			if err != nil {
-				continue
-			}
-
-			if !info.IsDir() &&
-				info.Mode().Perm()&0111 != 0 &&
-				strings.HasPrefix(f.Name(), input) {
-				matches = append(matches, f.Name())
-			}
-		}
-	}
-
-	slices.Sort(matches)
-	matches = slices.Compact(matches)
-
-	switch len(matches) {
-	case 0:
-		fmt.Print("\a")
-		a.isFirstTab = true
-
-	case 1:
-		a.isFirstTab = true
-		match := strings.TrimPrefix(matches[0], input)
-
-		return [][]rune{
-			[]rune(match + " "),
-		}, len([]rune(input))
-
-	default:
-		//MOST UGLY CODE EVEEEEEEEEEERRRRRRRRR
-		//refactor on the next week fr
-		wordToadd := ""
-		for i, c := range matches[0][pos:] {
-			if isXinallY(c, i, pos, matches[0:]) {
-				wordToadd += string(c)
-				continue
-			}
-			break
-		}
-
-		if wordToadd != "" {
-			return [][]rune{[]rune(wordToadd)}, 0
-		}
-
-		if a.isFirstTab {
-			a.isFirstTab = false
-			fmt.Print("\a")
-		}
-
-		fmt.Print("\n" + strings.Join(matches, "  ") + "\n")
-
-		if a.refresh != nil {
-			a.refresh()
-		}
-
-		a.isFirstTab = true
-	}
-
-	return nil, pos
-}
-
-func isXinallY(c rune, i, pos int, matches []string) bool {
-	for _, match := range matches {
-		if match[i+pos] != byte(c) {
-			return false
-		}
-	}
-	return true
-}
-
 func (s *Shell) Run() error {
 	rlConfig := &readline.Config{
 		Prompt:       s.prompt,
@@ -163,12 +67,10 @@ func (s *Shell) Run() error {
 		if key != '\t' {
 			s.autocompleter.isFirstTab = true
 		}
-
 		return line, pos, false
 	})
 
 	rl, err := readline.NewEx(rlConfig)
-
 	if err != nil {
 		panic(err)
 	}
@@ -199,9 +101,7 @@ func (s *Shell) Run() error {
 		if handleCommand(command) {
 			break
 		}
-
 	}
-
 	return nil
 }
 
