@@ -16,7 +16,33 @@ type AutoCompleter struct {
 
 func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	input := string(line[:pos])
+
 	var matches []string
+
+	spacePos := strings.Index(input, " ") // cambiar por cut
+	if spacePos != -1 {
+		arg := input[spacePos+1:]
+		dir, _ := os.Getwd()
+		for _, dir := range filepath.SplitList(dir) {
+			files, err := os.ReadDir(dir)
+			if err != nil {
+				continue
+			}
+
+			for _, f := range files {
+				info, err := f.Info()
+				if err != nil {
+					continue
+				}
+
+				if !info.IsDir() && strings.HasPrefix(f.Name(), arg) {
+					matches = append(matches, f.Name())
+				}
+			}
+		}
+
+		return a.showMatches(arg, matches, len(arg))
+	}
 
 	for command := range a.shell.builtin {
 		if strings.HasPrefix(command, input) {
