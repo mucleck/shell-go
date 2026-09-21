@@ -15,42 +15,24 @@ type AutoCompleter struct {
 }
 
 func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+
 	input := string(line[:pos])
-
 	var matches []string
-
-	spacePos := strings.Index(input, " ") // cambiar por cut
-	if spacePos != -1 {
-		arg := input[spacePos+1:]
-		dir, _ := os.Getwd()
-		for _, dir := range filepath.SplitList(dir) {
-			files, err := os.ReadDir(dir)
-			if err != nil {
-				continue
-			}
-
-			for _, f := range files {
-				info, err := f.Info()
-				if err != nil {
-					continue
-				}
-
-				if !info.IsDir() && strings.HasPrefix(f.Name(), arg) {
-					matches = append(matches, f.Name())
-				}
-			}
-		}
-
-		return a.showMatches(arg, matches, len(arg))
-	}
-
 	for command := range a.shell.builtin {
 		if strings.HasPrefix(command, input) {
 			matches = append(matches, command)
 		}
 	}
 
-	for _, dir := range filepath.SplitList(a.shell.path) {
+	directory := a.shell.path
+	spacePos := strings.Index(input, " ") // cambiar por cut
+	if spacePos != -1 {
+		directory, _ = os.Getwd()
+		input = input[spacePos+1:]
+		pos = len(input)
+	}
+
+	for _, dir := range filepath.SplitList(directory) {
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			continue
@@ -62,10 +44,12 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 				continue
 			}
 
-			if !info.IsDir() &&
-				info.Mode().Perm()&0111 != 0 &&
-				strings.HasPrefix(f.Name(), input) {
-				matches = append(matches, f.Name())
+			if !info.IsDir() && strings.HasPrefix(f.Name(), input) {
+				if spacePos != -1 {
+					matches = append(matches, f.Name())
+				} else if info.Mode().Perm()&0111 != 0 {
+					matches = append(matches, f.Name())
+				}
 			}
 		}
 	}
