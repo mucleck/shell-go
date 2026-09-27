@@ -29,6 +29,21 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 	if spacePos != -1 {
 		directory, _ = os.Getwd()
 		input = input[spacePos+1:]
+		if strings.HasSuffix(input, string(filepath.Separator)) {
+			directory = filepath.Clean(input)
+			input = ""
+		} else {
+			dir := filepath.Dir(input)
+			name := filepath.Base(input)
+			info, err := os.Stat(dir)
+
+			if err == nil && info.IsDir() {
+				directory = dir
+				input = name
+			} else {
+				directory, _ = os.Getwd()
+			}
+		}
 		pos = len(input)
 	}
 
