@@ -1,8 +1,3 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/b92fd09b-5a51-43c7-9200-fd8cac648cad)](https://app.codecrafters.io/users/mucleck?r=2qF)
-
-This is a starting point for Go solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
-
 In this challenge, you'll build your own POSIX compliant shell that's capable of
 interpreting shell commands, running external programs and builtin commands like
 cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
