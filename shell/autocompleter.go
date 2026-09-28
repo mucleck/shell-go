@@ -24,6 +24,7 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 		}
 	}
 
+	var isDir bool
 	directory := a.shell.path
 	spacePos := strings.Index(input, " ") // cambiar por cut
 	if spacePos != -1 {
@@ -59,20 +60,29 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 				continue
 			}
 
-			if !info.IsDir() && strings.HasPrefix(f.Name(), input) {
-				if spacePos != -1 {
-					matches = append(matches, f.Name())
-				} else if info.Mode().Perm()&0111 != 0 {
-					matches = append(matches, f.Name())
+			if strings.HasPrefix(f.Name(), input) {
+				if spacePos != -1 || info.Mode().Perm()&0111 != 0 {
+					if info.IsDir() {
+						isDir = true
+						matches = append(matches, f.Name()+"/")
+						pos++
+					} else {
+						matches = append(matches, f.Name())
+					}
+
 				}
+			} else if input == "." {
+
+				isDir = true
+				matches = append(matches, f.Name()+"/")
 			}
 		}
 	}
 
-	return a.showMatches(input, matches, pos)
+	return a.showMatches(input, matches, pos, isDir)
 }
 
-func (a *AutoCompleter) showMatches(input string, matches []string, pos int) (newLine [][]rune, length int) {
+func (a *AutoCompleter) showMatches(input string, matches []string, pos int, isDir bool) (newLine [][]rune, length int) {
 
 	slices.Sort(matches)
 	matches = slices.Compact(matches)
@@ -85,6 +95,11 @@ func (a *AutoCompleter) showMatches(input string, matches []string, pos int) (ne
 		a.isFirstTab = true
 		match := strings.TrimPrefix(matches[0], input)
 
+		if isDir {
+			return [][]rune{
+				[]rune(match),
+			}, len([]rune(input))
+		}
 		return [][]rune{
 			[]rune(match + " "),
 		}, len([]rune(input))
