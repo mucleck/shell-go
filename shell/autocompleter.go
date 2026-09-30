@@ -1,3 +1,4 @@
+// Package shell is a package
 package shell
 
 import (
@@ -14,7 +15,17 @@ type AutoCompleter struct {
 	refresh    func()
 }
 
+/*
+*	Everything here is really bad done... I will refactor all the auto completition logic...
+*	Ill  make two points to mark here to be done
+*	-[ ] Stablish the stuff we want to acommplis, this doesnt just mean to pass the test. It really means that any design for this should be
+*				 a solid solition instead of a passing tests guesser
+*	-[ ] Do the job on small functions
+* */
+
 func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	//matches := getMatches(input)
+	//candidates := filterMatches(matches)
 
 	input := string(line[:pos])
 	var matches []string
@@ -26,9 +37,10 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 
 	var isDir bool
 	directory := a.shell.path
+
 	spacePos := strings.Index(input, " ") // cambiar por cut
 	if spacePos != -1 {
-		directory, _ = os.Getwd()
+		//directory, _ = os.Getwd()
 		input = input[spacePos+1:]
 		if strings.HasSuffix(input, string(filepath.Separator)) {
 			directory = filepath.Clean(input)
@@ -61,7 +73,7 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 			}
 
 			if strings.HasPrefix(f.Name(), input) {
-				if spacePos != -1 || info.Mode().Perm()&0111 != 0 {
+				if spacePos != -1 || info.Mode().Perm()&0o111 != 0 {
 					if info.IsDir() {
 						isDir = true
 						matches = append(matches, f.Name()+"/")
@@ -69,7 +81,6 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 					} else {
 						matches = append(matches, f.Name())
 					}
-
 				}
 			} else if input == "." {
 
@@ -83,7 +94,6 @@ func (a *AutoCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) 
 }
 
 func (a *AutoCompleter) showMatches(input string, matches []string, pos int, isDir bool) (newLine [][]rune, length int) {
-
 	slices.Sort(matches)
 	matches = slices.Compact(matches)
 
@@ -104,9 +114,9 @@ func (a *AutoCompleter) showMatches(input string, matches []string, pos int, isD
 			[]rune(match + " "),
 		}, len([]rune(input))
 	default:
-		//este codigo es muy feo pero basicamente buscamos si en los resultados tenemos
-		//alguna palabra común para poder añadirla, por ejemplo si mis resultados al primer tab
-		//son foo_bar_xyz y foo_bar_zyx si y le damos al tab con esto se nos añade bar_
+		// este codigo es muy feo pero basicamente buscamos si en los resultados tenemos
+		// alguna palabra común para poder añadirla, por ejemplo si mis resultados al primer tab
+		// son foo_bar_xyz y foo_bar_zyx si y le damos al tab con esto se nos añade bar_
 		var wordToadd strings.Builder
 		for i, c := range matches[0][pos:] {
 			if isXinallY(c, i, pos, matches[0:]) {

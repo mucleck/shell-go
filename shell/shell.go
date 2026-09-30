@@ -35,7 +35,7 @@ type fds struct {
 var (
 	ErrPathNotFound = errors.New("cannot find path")
 	ErrPwdNotFound  = errors.New("cant get current working dir, weird")
-	ErrNoToken      = errors.New("Nothing entered or cant parse it")
+	ErrNoToken      = errors.New("nothing entered or cant parse it")
 )
 
 const messageCommandNotFound = "command not found"
@@ -114,7 +114,7 @@ func (c *Command) commandExistsInPath(name string) string {
 	directories := strings.SplitSeq(c.shell.path, string(os.PathListSeparator))
 	for dir := range directories {
 		commandWithDir := filepath.Join(dir, name)
-		//check file info in dir
+		// check file info in dir
 		file, err := os.Stat(commandWithDir)
 		if err != nil {
 			continue
@@ -125,7 +125,6 @@ func (c *Command) commandExistsInPath(name string) string {
 		}
 	}
 	return ""
-
 }
 
 func handleCommand(c Command) bool {
